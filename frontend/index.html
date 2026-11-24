@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DevInsight &mdash; Python Code Analyzer</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <a class="brand" href="#">
+        <span class="brand-logo" aria-hidden="true">
+          <svg viewBox="0 0 32 32"><path d="M6 8l7 8-7 8" /><path d="M16 24h10" /></svg>
+        </span>
+        <span class="brand-text">Dev<span>Insight</span></span>
+      </a>
+      <nav class="nav">
+        <a href="#analyze">Analyze</a>
+        <a href="#results" id="nav-results" class="hidden">Results</a>
+      </nav>
+      <div class="model-status" id="model-status" title="Analyzer status">
+        <span class="dot"></span><span class="label">Connecting...</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- ================= HERO + INPUT ================= -->
+    <section class="hero" id="analyze">
+      <div class="hero-copy">
+        <span class="eyebrow">AI-powered static analysis</span>
+        <h1>Find defect-prone Python code <em>before</em> it ships.</h1>
+        <p>
+          DevInsight analyzes every function in your Python project using AST and Radon complexity metrics to
+          predict defect risk &mdash; then tells you <strong>why</strong> code was flagged and <strong>how</strong> to fix it.
+        </p>
+      </div>
+
+      <div class="panel input-panel">
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="upload" role="tab">
+            <svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" /></svg>
+            Upload Project
+          </button>
+          <button class="tab" data-tab="paste" role="tab">
+            <svg viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5" /></svg>
+            Paste Code
+          </button>
+        </div>
+
+        <!-- Upload tab -->
+        <div class="tab-body" id="tab-upload">
+          <label class="dropzone" id="dropzone" for="file-input">
+            <input type="file" id="file-input" accept=".zip,.py" hidden />
+            <div class="dz-icon">
+              <svg viewBox="0 0 24 24"><path d="M7 18a5 5 0 01-.6-9.96A6 6 0 0118 9a4 4 0 01-1 7.9" /><path d="M12 12v9M8.5 15.5L12 12l3.5 3.5" /></svg>
+            </div>
+            <div class="dz-title">Drop a <code>.zip</code> project or <code>.py</code> file here</div>
+            <div class="dz-sub">or <span class="link">browse your computer</span> &bull; max 50 MB</div>
+            <div class="dz-note">Automatically ignores <code>venv</code>, <code>__pycache__</code>, <code>.git</code>, <code>node_modules</code></div>
+          </label>
+          <div class="file-chip hidden" id="file-chip">
+            <svg viewBox="0 0 24 24"><path d="M14 3H6a1 1 0 00-1 1v16a1 1 0 001 1h12a1 1 0 001-1V8z" /><path d="M14 3v5h5" /></svg>
+            <span class="name" id="file-name"></span>
+            <span class="size" id="file-size"></span>
+            <button class="icon-btn" id="file-clear" title="Remove file">&times;</button>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" id="btn-analyze-file" disabled>
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+              Analyze Project
+            </button>
+            <button class="btn btn-ghost" id="btn-sample">
+              <svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9z" /></svg>
+              Try sample_project.zip
+            </button>
+            <a class="btn btn-link" href="sample_project.zip" download>Download sample</a>
+          </div>
+        </div>
+
+        <!-- Paste tab -->
+        <div class="tab-body hidden" id="tab-paste">
+          <div class="editor">
+            <div class="editor-gutter" id="editor-gutter" aria-hidden="true">1</div>
+            <textarea id="code-input" spellcheck="false" placeholder="# Paste a Python function, class or whole module here...&#10;def example(x):&#10;    return x * 2"></textarea>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" id="btn-analyze-code">
+              <svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z" /></svg>
+              Analyze Code
+            </button>
+            <button class="btn btn-ghost" id="btn-example-bad">Load spaghetti example</button>
+            <button class="btn btn-ghost" id="btn-example-good">Load clean example</button>
+            <button class="btn btn-link" id="btn-clear-code">Clear</button>
+          </div>
+        </div>
+
+        <div class="error-box hidden" id="error-box"></div>
+      </div>
+    </section>
+
+    <!-- ================= LOADING ================= -->
+    <section class="loading hidden" id="loading">
+      <div class="spinner"></div>
+      <div>
+        <div class="loading-title">Analyzing code...</div>
+        <div class="loading-sub">Parsing AST &bull; extracting complexity metrics &bull; scoring defect risk</div>
+      </div>
+    </section>
+
+    <!-- ================= RESULTS ================= -->
+    <section class="results hidden" id="results">
+      <div class="section-head">
+        <div>
+          <h2>Analysis Report</h2>
+          <p class="muted" id="results-meta"></p>
+        </div>
+        <button class="btn btn-ghost" id="btn-export">
+          <svg viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5" /><path d="M4 20h16" /></svg>
+          Export JSON
+        </button>
+      </div>
+
+      <div class="summary-grid">
+        <div class="panel health-card">
+          <div class="ring-wrap">
+            <svg class="ring" viewBox="0 0 120 120">
+              <circle class="ring-bg" cx="60" cy="60" r="52" />
+              <circle class="ring-fg" id="health-ring" cx="60" cy="60" r="52" />
+            </svg>
+            <div class="ring-center">
+              <div class="ring-value" id="health-score">&ndash;</div>
+              <div class="ring-label">Health</div>
+            </div>
+          </div>
+          <div class="health-meta">
+            <div class="kicker">Project Health Score</div>
+            <div class="health-label" id="health-label">&ndash;</div>
+            <p class="muted small">LOC-weighted safety across all functions, penalized by the share of high-risk units.</p>
+          </div>
+        </div>
+
+        <div class="stat-cards">
+          <div class="panel stat">
+            <div class="stat-icon blue"><svg viewBox="0 0 24 24"><path d="M14 3H6a1 1 0 00-1 1v16a1 1 0 001 1h12a1 1 0 001-1V8z" /><path d="M14 3v5h5" /></svg></div>
+            <div><div class="stat-value" id="stat-files">0</div><div class="stat-label">Files Scanned</div></div>
+          </div>
+          <div class="panel stat">
+            <div class="stat-icon violet"><svg viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5" /></svg></div>
+            <div><div class="stat-value" id="stat-functions">0</div><div class="stat-label">Functions Scanned</div></div>
+          </div>
+          <div class="panel stat">
+            <div class="stat-icon red"><svg viewBox="0 0 24 24"><path d="M12 3l9 16H3z" /><path d="M12 10v4M12 17h.01" /></svg></div>
+            <div><div class="stat-value" id="stat-high">0</div><div class="stat-label">High Risk</div></div>
+          </div>
+          <div class="panel stat">
+            <div class="stat-icon amber"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg></div>
+            <div><div class="stat-value" id="stat-medium">0</div><div class="stat-label">Medium Risk</div></div>
+          </div>
+          <div class="panel stat">
+            <div class="stat-icon green"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" /><path d="M8.5 12l2.5 2.5 4.5-4.5" /></svg></div>
+            <div><div class="stat-value" id="stat-safe">0</div><div class="stat-label">Safe</div></div>
+          </div>
+          <div class="panel stat">
+            <div class="stat-icon slate"><svg viewBox="0 0 24 24"><path d="M4 19h16M7 16V9M12 16V5M17 16v-4" /></svg></div>
+            <div><div class="stat-value" id="stat-avg">0%</div><div class="stat-label">Avg Defect Risk</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel dist-panel">
+        <div class="dist-head">
+          <span>Risk distribution</span>
+          <span class="muted small">Threshold: P(defect) &ge; <b id="thr-label">0.47</b> = High &bull; &ge; <span id="med-thr-label">0.30</span> = Medium</span>
+        </div>
+        <div class="dist-bar" id="dist-bar"></div>
+        <div class="dist-legend">
+          <span><i class="lg high"></i>High</span>
+          <span><i class="lg medium"></i>Medium</span>
+          <span><i class="lg safe"></i>Safe</span>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="chips" id="filter-chips">
+          <button class="chip active" data-filter="all">All</button>
+          <button class="chip" data-filter="High">High</button>
+          <button class="chip" data-filter="Medium">Medium</button>
+          <button class="chip" data-filter="Safe">Safe</button>
+        </div>
+        <div class="toolbar-right">
+          <div class="search">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+            <input type="search" id="search" placeholder="Search files or functions..." />
+          </div>
+          <button class="btn btn-ghost sm" id="btn-expand">Expand all</button>
+          <button class="btn btn-ghost sm" id="btn-collapse">Collapse all</button>
+        </div>
+      </div>
+
+      <div id="file-list" class="file-list"></div>
+      <div id="empty-filter" class="empty hidden">No functions match the current filter.</div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">DevInsight &mdash; Static Python Defect &amp; Code Quality Analyzer</div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
