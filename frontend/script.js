@@ -413,8 +413,8 @@ def chunk(items: list, size: int) -> list[list]:
     const hlLines = new Set([...(fn.smells?.bare_except_lines || [])]);
     if (fn.smells?.max_nesting > 4 && fn.smells.max_nesting_line) hlLines.add(fn.smells.max_nesting_line);
 
-    const thr = lastReport?.summary?.threshold ?? 0.47;
-    const medThr = lastReport?.summary?.medium_threshold ?? 0.30;
+    const thr = lastReport?.summary?.threshold ?? 0.26;
+    const medThr = lastReport?.summary?.medium_threshold ?? 0.20;
     const risk = fn.risk;
     return `
       <div class="fn-card" data-level="${esc(fn.risk_level)}" data-name="${esc(fn.qualname.toLowerCase())}">

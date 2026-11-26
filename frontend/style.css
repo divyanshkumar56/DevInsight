@@ -280,10 +280,10 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
 .open > .fn-body { display: block; }
 
 .risk-meter { margin: 14px 0 4px; }
-.risk-meter-track { position: relative; height: 8px; border-radius: 999px; background: linear-gradient(90deg, var(--safe) 0 30%, var(--medium) 30% 47%, var(--high) 47% 100%); opacity: .25; }
+.risk-meter-track { position: relative; height: 8px; border-radius: 999px; background: linear-gradient(90deg, var(--safe) 0 20%, var(--medium) 20% 26%, var(--high) 26% 100%); opacity: .25; }
 .risk-meter-wrap { position: relative; }
 .risk-meter-fill { position: absolute; top: 0; left: 0; height: 8px; border-radius: 999px; }
-.risk-meter-thr { position: absolute; top: -4px; width: 2px; height: 16px; background: var(--text); opacity: .6; left: 47%; }
+.risk-meter-thr { position: absolute; top: -4px; width: 2px; height: 16px; background: var(--text); opacity: .6; left: 26%; }
 .risk-meter-labels { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--dim); margin-top: 6px; }
 
 .sub-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 18px 0 10px; display: flex; align-items: center; gap: 8px; }

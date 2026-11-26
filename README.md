@@ -2,10 +2,10 @@
 
 DevInsight scans Python projects **function by function**, extracts the 15 calibrated Radon + AST software
 metrics aligned with the NASA JM1 defect dataset, and predicts each function's **Defect Risk %** with a
-pre-trained `ExtraTreesClassifier` (`model.pkl`). For risky code, it explains **why it was flagged and how
+leak-free `RandomForestClassifier` (`model.pkl`). For risky code, it explains **why it was flagged and how
 to fix it**.
 
-![stack](https://img.shields.io/badge/Flask-3.x-blue) ![model](https://img.shields.io/badge/ExtraTrees-86.39%25%20acc-green) ![auc](https://img.shields.io/badge/ROC--AUC-0.9016-green)
+![stack](https://img.shields.io/badge/Flask-3.x-blue) ![model](https://img.shields.io/badge/RandomForest-79.79%25%20acc%20%400.50-green) ![auc](https://img.shields.io/badge/ROC--AUC-0.7038-green)
 
 ---
 
@@ -33,17 +33,23 @@ to fix it**.
   | Risky Halstead Profile | model says High, no single rule fired | Add unit tests and simplify operator density |
 - Export the complete report (including all 15 raw metrics per function) as JSON.
 
-## Model & Evaluation
+## Model & Evaluation (Leak-Free)
 
-- **Algorithm:** `ExtraTreesClassifier` (`n_estimators=400`, `class_weight="balanced"`).
-- **Dataset:** **NASA JM1** (PROMISE repository), cleaned to **5,912 records** (corrupted rows, Halstead mismatches, exact duplicates, contradictory twins, and KNN noise filtering).
-- **Evaluation Results (80/20 split, SMOTE on training set):**
-  - **Extra Trees (deployed):** `86.39%` Accuracy, `0.9016` ROC-AUC
-  - **Random Forest (baseline):** `85.63%` Accuracy
+- **Algorithm:** Regularized `RandomForestClassifier` (`n_estimators=500`, `max_depth=12`, `min_samples_leaf=5`, `max_features="sqrt"`).
+- **Dataset:** **NASA JM1** (PROMISE repository), integrity-cleaned from 10,885 raw rows to **7,717 unique modules** (header rows, `?` nulls, zero-LOC/token rows, Halstead length mismatches, exact duplicates, and contradictory twins removed).
+- **5-Fold Cross-Validation on `X_train` Only (6,173 modules, default `0.50` cutoff):**
+  - **Random Forest (selected):** `79.65%` Accuracy, `0.7086` ROC-AUC, `0.221` Defect F1
+  - **Extra Trees:** `79.59%` Accuracy, `0.7100` ROC-AUC, `0.094` Defect F1
+  - **Logistic Regression:** `79.51%` Accuracy, `0.6955` ROC-AUC, `0.177` Defect F1
+  - **Decision Tree:** `77.26%` Accuracy, `0.6566` ROC-AUC, `0.239` Defect F1
+- **Untouched Holdout Test Set (1,544 modules; threshold frozen via 5-fold CV on `X_train` only):**
+  - **ROC-AUC:** `0.7038`
+  - **Accuracy (@ standard `0.50`):** `79.79%`
+  - **Deployed CV-tuned threshold (`0.26`):** `74.35%` Accuracy, **50.2% Defect Recall (`162/323`)**, `0.45` Defect F1 (`TN=986, FP=235, FN=161, TP=162`)
 - **Risk Bands:**
-  - `P(defect) >= 0.47` -> **High Risk** (predicted defective)
-  - `0.30 <= P(defect) < 0.47` -> **Medium Risk** (watch list)
-  - `P(defect) < 0.30` -> **Safe**
+  - `P(defect) >= 0.26` -> **High Risk** (predicted defective)
+  - `0.20 <= P(defect) < 0.26` -> **Medium Risk** (UI watch list)
+  - `P(defect) < 0.20` -> **Safe**
 - **Exact Feature Order (`RADON_15`):**
   `['loc', 'v(g)', 'v', 'd', 'e', 'lOCode', 'lOComment', 'lOBlank', 'n', 'uniq_Op', 'uniq_Opnd', 'total_Op', 'total_Opnd', 'b', 't']`
 
@@ -64,7 +70,7 @@ to fix it**.
 
 ```
 DevInsightFinal/
-├── model.pkl                  # pre-trained ExtraTreesClassifier (joblib)
+├── model.pkl                  # leak-free RandomForestClassifier (joblib, compressed)
 ├── backend/
 │   ├── app.py                 # Flask server + REST API, serves the frontend
 │   └── extractor.py           # AST + calibrated Radon extraction, prediction, diagnostics

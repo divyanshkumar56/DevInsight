@@ -3,7 +3,7 @@ DevInsight - Radon metric extractor, defect predictor and diagnostics engine.
 
 Analyzes Python source code function-by-function (or the module as a whole when
 it contains no functions), extracts the 15 Radon metrics expected by the trained
-ExtraTreesClassifier (NASA JM1 feature space), predicts the defect risk and
+RandomForestClassifier (NASA JM1 feature space), predicts the defect risk and
 produces root-cause diagnostics with concrete refactoring advice.
 """
 
@@ -51,8 +51,8 @@ METRIC_INFO = {
     "t":          "Halstead time to program (s)",
 }
 
-DEFECT_THRESHOLD = 0.47   # predict_proba >= 0.47  -> High Risk / Defective
-MEDIUM_THRESHOLD = 0.30   # 0.30 <= p < 0.47       -> Medium (watch list)
+DEFECT_THRESHOLD = 0.26   # predict_proba >= 0.26  -> High Risk / Defective (5-fold CV tuned)
+MEDIUM_THRESHOLD = 0.20   # 0.20 <= p < 0.26       -> Medium (watch list)
 
 # Diagnostic thresholds
 CC_LIMIT = 10
@@ -72,7 +72,7 @@ DEFAULT_MODEL_PATH = Path(__file__).resolve().parent.parent / "model.pkl"
 # --------------------------------------------------------------------------- #
 
 def load_model(path: str | os.PathLike | None = None):
-    """Load the trained ExtraTreesClassifier from disk with joblib."""
+    """Load the trained RandomForestClassifier from disk with joblib."""
     import joblib
 
     model_path = Path(path or os.environ.get("DEVINSIGHT_MODEL", DEFAULT_MODEL_PATH))

@@ -44,17 +44,19 @@ MAX_PY_FILES = 3000
 MAX_CODE_CHARS = 500_000
 
 MODEL_INFO = {
-    "name": "Extra Trees Classifier",
+    "name": "Random Forest Classifier (Regularized)",
     "library": "scikit-learn (joblib)",
-    "dataset": "NASA JM1 (PROMISE repository, KNN noise-filtered)",
-    "records": 5912,
+    "dataset": "NASA JM1 (PROMISE repository, leak-free split)",
+    "records": 7717,
     "features": RADON_15,
     "feature_descriptions": METRIC_INFO,
     "threshold": DEFECT_THRESHOLD,
     "medium_threshold": MEDIUM_THRESHOLD,
     "results": [
-        {"model": "Extra Trees", "accuracy": 86.39, "roc_auc": 0.9016, "selected": True},
-        {"model": "Random Forest", "accuracy": 85.63, "roc_auc": None, "selected": False},
+        {"model": "Random Forest (selected)", "cv_accuracy": 79.65, "cv_roc_auc": 0.7086, "cv_f1": 0.221, "test_accuracy_050": 79.79, "test_accuracy_026": 74.35, "test_roc_auc": 0.7038, "test_defect_f1": 0.45, "selected": True},
+        {"model": "Extra Trees", "cv_accuracy": 79.59, "cv_roc_auc": 0.7100, "cv_f1": 0.094, "selected": False},
+        {"model": "Logistic Regression", "cv_accuracy": 79.51, "cv_roc_auc": 0.6955, "cv_f1": 0.177, "selected": False},
+        {"model": "Decision Tree", "cv_accuracy": 77.26, "cv_roc_auc": 0.6566, "cv_f1": 0.239, "selected": False},
     ],
 }
 
