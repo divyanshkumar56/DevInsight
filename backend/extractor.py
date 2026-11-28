@@ -82,6 +82,10 @@ def load_model(path: str | os.PathLike | None = None):
         # model.pkl was trained with scikit-learn 1.6.x; silence version-mismatch noise.
         warnings.simplefilter("ignore")
         model = joblib.load(model_path)
+    # Force single-threaded inference so low-CPU cloud containers (e.g. Render Free 0.1 vCPU)
+    # do not spawn dozens of joblib threads across shared host cores and thrash/hang.
+    if hasattr(model, "n_jobs"):
+        model.n_jobs = 1
     n_features = getattr(model, "n_features_in_", len(RADON_15))
     if n_features != len(RADON_15):
         raise ValueError(f"Model expects {n_features} features, extractor provides {len(RADON_15)}")
@@ -176,8 +180,12 @@ def compute_radon_metrics(
     # --- Calibrated Halstead metrics (Radon expression ops + AST statement/call ops) ---
     hal = h_visit(source).total
     tree = node if node is not None else ast.parse(source)
-    ast_op_types = {type(n) for n in ast.walk(tree) if isinstance(n, _AST_OP_NODES)}
-    ast_op_count = sum(1 for n in ast.walk(tree) if isinstance(n, _AST_OP_NODES))
+    ast_op_types = set()
+    ast_op_count = 0
+    for n in ast.walk(tree):
+        if isinstance(n, _AST_OP_NODES):
+            ast_op_types.add(type(n))
+            ast_op_count += 1
 
     uniq_Op = hal.h1 + len(ast_op_types)
     total_Op = hal.N1 + ast_op_count
@@ -549,20 +557,24 @@ def analyze_files(files: list[tuple[str, str]], model) -> dict[str, Any]:
     # Project summary
     all_funcs = [fn for f in file_entries for fn in f["functions"]]
     total_funcs = len(all_funcs)
+    files_with_errors = sum(1 for f in file_entries if f["error"])
     weights = [max(fn["metrics"]["loc"], 1.0) for fn in all_funcs]
     if total_funcs:
         weighted_risk = sum(fn["probability"] * w for fn, w in zip(all_funcs, weights)) / sum(weights)
         high_share = sum(1 for fn in all_funcs if fn["risk_level"] == "High") / total_funcs
         # Health: LOC-weighted safety, with an extra penalty for the share of high-risk units.
         health = max(0.0, min(100.0, 100.0 * (1.0 - weighted_risk) - 15.0 * high_share))
+        health_label = "Healthy" if health >= 75 else ("Needs Attention" if health >= 50 else "Critical")
+    elif files_with_errors:
+        weighted_risk, health, health_label = 0.0, 0.0, "Parse Error"
     else:
-        weighted_risk, health = 0.0, 100.0
+        weighted_risk, health, health_label = 0.0, 100.0, "Healthy"
 
     summary = {
         "health_score": round(health, 1),
-        "health_label": "Healthy" if health >= 75 else ("Needs Attention" if health >= 50 else "Critical"),
+        "health_label": health_label,
         "total_files": len(file_entries),
-        "files_with_errors": sum(1 for f in file_entries if f["error"]),
+        "files_with_errors": files_with_errors,
         "total_functions": total_funcs,
         "high_risk": sum(1 for fn in all_funcs if fn["risk_level"] == "High"),
         "medium_risk": sum(1 for fn in all_funcs if fn["risk_level"] == "Medium"),
